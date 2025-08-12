@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { 
   BookOutlined, 
@@ -12,75 +12,62 @@ import {
   ArrowLeftOutlined
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
 
 const article = ref({
-  id: 1,
-  title: 'Vue3 组合式API最佳实践',
-  author: '技术达人',
+  id: 0,
+  title: '',
+  author: '',
   authorAvatar: '',
-  publishTime: '2024-01-15',
-  readTime: '8分钟',
-  views: 1234,
-  likes: 89,
-  tags: ['Vue3', '前端', 'JavaScript'],
-  content: `
-    <h2>引言</h2>
-    <p>Vue3的组合式API为我们提供了更灵活、更强大的组件逻辑组织方式。本文将深入探讨组合式API的最佳实践，帮助你更好地构建现代化前端应用。</p>
-    
-    <h2>1. 响应式数据管理</h2>
-    <p>在Vue3中，我们使用ref和reactive来创建响应式数据：</p>
-    <pre><code>import { ref, reactive } from 'vue'
-
-const count = ref(0)
-const user = reactive({
-  name: 'John',
-  age: 25
-})</code></pre>
-    
-    <h2>2. 计算属性</h2>
-    <p>使用computed来创建计算属性：</p>
-    <pre><code>const doubleCount = computed(() => count.value * 2)</code></pre>
-    
-    <h2>3. 生命周期钩子</h2>
-    <p>组合式API提供了更直观的生命周期管理：</p>
-    <pre><code>onMounted(() => {
-  console.log('组件已挂载')
-})
-
-onUnmounted(() => {
-  console.log('组件已卸载')
-})</code></pre>
-    
-    <h2>4. 组合函数</h2>
-    <p>创建可复用的逻辑组合：</p>
-    <pre><code>function useCounter() {
-  const count = ref(0)
-  
-  const increment = () => count.value++
-  const decrement = () => count.value--
-  
-  return {
-    count,
-    increment,
-    decrement
-  }
-}</code></pre>
-    
-    <h2>总结</h2>
-    <p>组合式API让我们能够更好地组织代码逻辑，提高代码的可维护性和可复用性。通过合理使用这些特性，我们可以构建出更加优雅的Vue应用。</p>
-  `,
-  relatedArticles: [
-    { id: 2, title: 'Vue3性能优化技巧', views: 856 },
-    { id: 3, title: 'Vue Router 4 新特性', views: 743 },
-    { id: 4, title: 'Pinia状态管理指南', views: 621 }
-  ]
+  publishTime: '',
+  readTime: '5分钟',
+  views: 0,
+  likes: 0,
+  tags: [],
+  content: '',
+  relatedArticles: []
 })
 
 const isLiked = ref(false)
 const isLoading = ref(false)
+
+// 获取文章数据
+const fetchArticle = async () => {
+  try {
+    isLoading.value = true
+    const articleId = route.params.id
+    console.log('正在获取文章ID:', articleId)
+    
+    const response = await axios.get(`/api/articles/${articleId}`)
+    const articleData = response.data
+    console.log('获取到的文章数据:', articleData)
+    
+    // 格式化文章数据
+    article.value = {
+      id: articleData.id,
+      title: articleData.title,
+      author: articleData.author || '未知作者',
+      authorAvatar: '',
+      publishTime: articleData.created_at ? new Date(articleData.created_at).toLocaleDateString('zh-CN') : '',
+      readTime: '5分钟',
+      views: articleData.views || 0,
+      likes: articleData.likes_count || 0,
+      tags: articleData.tags || [],
+      content: articleData.content || '',
+      relatedArticles: []
+    }
+    console.log('格式化后的文章数据:', article.value)
+  } catch (error) {
+    console.error('获取文章失败:', error)
+    message.error('获取文章失败')
+    router.push('/articles')
+  } finally {
+    isLoading.value = false
+  }
+}
 
 const handleLike = () => {
   isLiked.value = !isLiked.value
@@ -112,6 +99,18 @@ const handleAuthorClick = () => {
   console.log('查看作者:', article.value.author)
   // router.push(`/author/${article.value.author}`)
 }
+
+// 监听路由参数变化
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    fetchArticle()
+  }
+})
+
+// 组件挂载时获取文章数据
+onMounted(() => {
+  fetchArticle()
+})
 </script>
 
 <template>
@@ -122,94 +121,99 @@ const handleAuthorClick = () => {
       <span>返回</span>
     </div>
     
-    <!-- 文章主体 -->
-    <div class="article-container">
-      <!-- 文章头部 -->
-      <div class="article-header">
-        <h1 class="article-title">{{ article.title }}</h1>
-        
-        <div class="article-meta">
-          <div class="author-info" @click="handleAuthorClick">
-            <a-avatar :size="40" class="author-avatar">
-              <template #icon><UserOutlined /></template>
-            </a-avatar>
-            <div class="author-details">
-              <div class="author-name">{{ article.author }}</div>
-              <div class="publish-time">
-                <CalendarOutlined />
-                {{ article.publishTime }} · {{ article.readTime }}
+    <!-- 加载状态 -->
+    <a-spin :spinning="isLoading" tip="加载中...">
+      <div v-if="!isLoading && article.title">
+        <!-- 文章主体 -->
+        <div class="article-container">
+          <!-- 文章头部 -->
+          <div class="article-header">
+            <h1 class="article-title">{{ article.title }}</h1>
+            
+            <div class="article-meta">
+              <div class="author-info" @click="handleAuthorClick">
+                <a-avatar :size="40" class="author-avatar">
+                  <template #icon><UserOutlined /></template>
+                </a-avatar>
+                <div class="author-details">
+                  <div class="author-name">{{ article.author }}</div>
+                  <div class="publish-time">
+                    <CalendarOutlined />
+                    {{ article.publishTime }} · {{ article.readTime }}
+                  </div>
+                </div>
               </div>
+              
+              <div class="article-stats">
+                <div class="stat-item">
+                  <EyeOutlined />
+                  <span>{{ article.views }}</span>
+                </div>
+                <div class="stat-item">
+                  <LikeOutlined />
+                  <span>{{ article.likes }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="article-tags">
+              <TagOutlined class="tag-icon" />
+              <a-tag 
+                v-for="tag in article.tags" 
+                :key="tag"
+                color="blue"
+                class="tag"
+              >
+                {{ tag }}
+              </a-tag>
             </div>
           </div>
           
-          <div class="article-stats">
-            <div class="stat-item">
-              <EyeOutlined />
-              <span>{{ article.views }}</span>
-            </div>
-            <div class="stat-item">
-              <LikeOutlined />
-              <span>{{ article.likes }}</span>
-            </div>
+          <!-- 文章内容 -->
+          <div class="article-content" v-html="article.content"></div>
+          
+          <!-- 文章操作 -->
+          <div class="article-actions">
+            <a-button 
+              :type="isLiked ? 'primary' : 'default'"
+              @click="handleLike"
+              class="action-btn"
+            >
+              <template #icon><LikeOutlined /></template>
+              {{ isLiked ? '已收藏' : '收藏' }}
+            </a-button>
+            
+            <a-button @click="handleShare" class="action-btn">
+              <template #icon><ShareAltOutlined /></template>
+              分享
+            </a-button>
           </div>
         </div>
         
-        <div class="article-tags">
-          <TagOutlined class="tag-icon" />
-          <a-tag 
-            v-for="tag in article.tags" 
-            :key="tag"
-            color="blue"
-            class="tag"
-          >
-            {{ tag }}
-          </a-tag>
-        </div>
-      </div>
-      
-      <!-- 文章内容 -->
-      <div class="article-content" v-html="article.content"></div>
-      
-      <!-- 文章操作 -->
-      <div class="article-actions">
-        <a-button 
-          :type="isLiked ? 'primary' : 'default'"
-          @click="handleLike"
-          class="action-btn"
-        >
-          <template #icon><LikeOutlined /></template>
-          {{ isLiked ? '已收藏' : '收藏' }}
-        </a-button>
-        
-        <a-button @click="handleShare" class="action-btn">
-          <template #icon><ShareAltOutlined /></template>
-          分享
-        </a-button>
-      </div>
-    </div>
-    
-    <!-- 相关文章 -->
-    <div class="related-articles">
-      <h3 class="related-title">
-        <BookOutlined />
-        相关文章
-      </h3>
-      
-      <div class="related-list">
-        <div 
-          v-for="related in article.relatedArticles" 
-          :key="related.id"
-          class="related-item"
-          @click="handleRelatedArticleClick(related)"
-        >
-          <div class="related-title-text">{{ related.title }}</div>
-          <div class="related-views">
-            <EyeOutlined />
-            {{ related.views }}
+        <!-- 相关文章 -->
+        <div class="related-articles">
+          <h3 class="related-title">
+            <BookOutlined />
+            相关文章
+          </h3>
+          
+          <div class="related-list">
+            <div 
+              v-for="related in article.relatedArticles" 
+              :key="related.id"
+              class="related-item"
+              @click="handleRelatedArticleClick(related)"
+            >
+              <div class="related-title-text">{{ related.title }}</div>
+              <div class="related-views">
+                <EyeOutlined />
+                {{ related.views }}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </a-spin>
   </div>
 </template>
 

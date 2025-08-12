@@ -18,12 +18,10 @@ export default defineConfig({
   server:{
     proxy:{
       '/api':{
-        target:'http://localhost:5000/api',
-        changeOrigin: true,
-        rewrite:path=>path.replace(/^\/api/,'')
+        target:'http://localhost:5000',
+        changeOrigin: true
       }
     },
-    allowedHosts:"84b96a6.r9.cpolar.cn",
     host:'0.0.0.0',
     port:5173,
   }
