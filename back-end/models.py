@@ -10,9 +10,9 @@ class User(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)  # 改为可空
     password_hash = db.Column(db.String(255), nullable=False)
-    real_name = db.Column(db.String(64))
+    real_name = db.Column(db.String(64))  # 保留字段但不再使用
     phone = db.Column(db.String(20))
     authority = db.Column(db.Integer, default=0)  # 0: 普通用户, 1: 管理员
     avatar = db.Column(db.String(255))

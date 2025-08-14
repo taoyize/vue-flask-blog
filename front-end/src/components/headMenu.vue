@@ -54,6 +54,12 @@ const items = ref<MenuProps['items']>([
     title: '发布文章',
     icon: () => h(PlusOutlined),
   },
+  {
+    key: '/me',
+    label: '我的',
+    title: '我的',
+    icon: () => h(UserOutlined),
+  },
   
   {
     key: '/login',

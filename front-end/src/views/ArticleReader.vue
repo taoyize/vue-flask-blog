@@ -60,6 +60,9 @@ const fetchArticle = async () => {
       relatedArticles: []
     }
     console.log('格式化后的文章数据:', article.value)
+    
+    // 检查用户是否已点赞
+    await checkUserLikeStatus()
   } catch (error) {
     console.error('获取文章失败:', error)
     message.error('获取文章失败')
@@ -69,14 +72,79 @@ const fetchArticle = async () => {
   }
 }
 
-const handleLike = () => {
-  isLiked.value = !isLiked.value
-  if (isLiked.value) {
-    article.value.likes++
-    message.success('已添加到收藏')
-  } else {
-    article.value.likes--
-    message.info('已取消收藏')
+// 检查用户点赞状态
+const checkUserLikeStatus = async () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) {
+    isLiked.value = false
+    console.log('用户未登录，点赞状态设为false')
+    return
+  }
+  
+  let user = null
+  try { user = JSON.parse(userStr) } catch { user = null }
+  if (!user || !user.id) {
+    isLiked.value = false
+    console.log('用户信息无效，点赞状态设为false')
+    return
+  }
+  
+  try {
+    console.log('检查用户点赞状态，用户ID:', user.id, '文章ID:', article.value.id)
+    const response = await axios.get(`/api/articles/${article.value.id}/like?user_id=${user.id}`)
+    isLiked.value = response.data.is_liked
+    console.log('点赞状态检查结果:', response.data.is_liked)
+  } catch (error) {
+    console.error('检查点赞状态失败:', error)
+    isLiked.value = false
+  }
+}
+
+const handleLike = async () => {
+  // 检查用户是否登录
+  const userStr = localStorage.getItem('user')
+  if (!userStr) {
+    message.warning('请先登录')
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  
+  let user = null
+  try { user = JSON.parse(userStr) } catch { user = null }
+  if (!user || !user.id) {
+    message.warning('请先登录')
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+
+  console.log('执行点赞操作，用户ID:', user.id, '文章ID:', article.value.id, '当前点赞状态:', isLiked.value)
+
+  try {
+    // 调用后端API
+    const response = await axios.post(`/api/articles/${article.value.id}/like`, {
+      user_id: user.id
+    })
+    
+    console.log('点赞API响应:', response.data)
+    
+    if (response.data) {
+      // 更新前端状态
+      isLiked.value = response.data.is_liked
+      article.value.likes = response.data.likes_count
+      
+      console.log('更新后的点赞状态:', isLiked.value, '点赞数:', article.value.likes)
+      
+      if (isLiked.value) {
+        message.success('点赞成功')
+      } else {
+        message.info('取消点赞成功')
+      }
+    }
+  } catch (error) {
+    console.error('点赞操作失败:', error)
+    message.error('点赞操作失败，请稍后重试')
+    // 恢复原状态
+    isLiked.value = !isLiked.value
   }
 }
 
@@ -180,7 +248,7 @@ onMounted(() => {
               class="action-btn"
             >
               <template #icon><LikeOutlined /></template>
-              {{ isLiked ? '已收藏' : '收藏' }}
+              {{ isLiked ? '已点赞' : '点赞' }}
             </a-button>
             
             <a-button @click="handleShare" class="action-btn">

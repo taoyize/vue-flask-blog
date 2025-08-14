@@ -1,8 +1,9 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined, IdcardOutlined } from '@ant-design/icons-vue'
+import { UserOutlined, LockOutlined, MailOutlined, PhoneOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
+import axios from 'axios'
 
 const router = useRouter()
 
@@ -14,8 +15,7 @@ const formState = reactive({
   email: '',
   password: '',
   confirmPassword: '',
-  phone: '',
-  realName: ''
+  phone: ''
 })
 
 const rules = {
@@ -24,7 +24,6 @@ const rules = {
     { min: 3, max: 20, message: '用户名长度在3-20个字符', trigger: 'blur' }
   ],
   email: [
-    { required: true, message: '请输入邮箱地址', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ],
   password: [
@@ -44,12 +43,7 @@ const rules = {
     }
   ],
   phone: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式', trigger: 'blur' }
-  ],
-  realName: [
-    { required: true, message: '请输入真实姓名', trigger: 'blur' },
-    { min: 2, max: 10, message: '姓名长度在2-10个字符', trigger: 'blur' }
   ]
 }
 
@@ -58,15 +52,39 @@ const handleSubmit = async () => {
     await formRef.value.validate()
     loading.value = true
     
-    // 模拟注册请求
-    setTimeout(() => {
+    // 准备注册数据
+    const registerData = {
+      username: formState.username,
+      password: formState.password
+    }
+    
+    // 如果填写了邮箱，则添加到注册数据中
+    if (formState.email.trim()) {
+      registerData.email = formState.email.trim()
+    }
+    
+    // 如果填写了手机号，则添加到注册数据中
+    if (formState.phone.trim()) {
+      registerData.phone = formState.phone.trim()
+    }
+    
+    // 调用注册API
+    const response = await axios.post('/api/register', registerData)
+    
+    if (response.data) {
       message.success('注册成功！欢迎加入理想主义者社区')
       router.push('/login')
-      loading.value = false
-    }, 2000)
+    }
     
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('注册失败:', error)
+    if (error.response?.data?.error) {
+      message.error(error.response.data.error)
+    } else {
+      message.error('注册失败，请稍后重试')
+    }
+  } finally {
+    loading.value = false
   }
 }
 
@@ -112,10 +130,10 @@ const handleBack = () => {
           </a-input>
         </a-form-item>
         
-        <a-form-item label="邮箱地址" name="email">
+        <a-form-item label="邮箱地址（可选）" name="email">
           <a-input
             v-model:value="formState.email"
-            placeholder="请输入邮箱地址"
+            placeholder="请输入邮箱地址（可选）"
             size="large"
           >
             <template #prefix>
@@ -124,22 +142,10 @@ const handleBack = () => {
           </a-input>
         </a-form-item>
         
-        <a-form-item label="真实姓名" name="realName">
-          <a-input
-            v-model:value="formState.realName"
-            placeholder="请输入真实姓名"
-            size="large"
-          >
-            <template #prefix>
-              <IdcardOutlined />
-            </template>
-          </a-input>
-        </a-form-item>
-        
-        <a-form-item label="手机号码" name="phone">
+        <a-form-item label="手机号码（可选）" name="phone">
           <a-input
             v-model:value="formState.phone"
-            placeholder="请输入手机号码"
+            placeholder="请输入手机号码（可选）"
             size="large"
           >
             <template #prefix>

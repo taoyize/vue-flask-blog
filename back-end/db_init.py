@@ -51,7 +51,17 @@ def init_database():
         )
         user3.set_password('123456')
         
-        db.session.add_all([admin_user, user1, user2, user3])
+        # 添加一个没有邮箱的用户示例
+        user4 = User(
+            username='minimal_user',
+            email=None,  # 没有邮箱
+            real_name='简约用户',
+            phone=None,  # 没有手机号
+            authority=0
+        )
+        user4.set_password('123456')
+        
+        db.session.add_all([admin_user, user1, user2, user3, user4])
         db.session.flush()  # 获取用户ID
         
         # 创建示例标签

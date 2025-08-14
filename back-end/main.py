@@ -52,36 +52,41 @@ def register():
     """用户注册"""
     try:
         data = request.json
-        required_fields = ['username', 'email', 'password', 'real_name', 'phone']
+        required_fields = ['username', 'password']
         
         # 验证必填字段
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'缺少必填字段: {field}'}), 400
         
-        # 验证用户名和邮箱是否已存在
+        # 验证用户名是否已存在
         if User.query.filter_by(username=data['username']).first():
             return jsonify({'error': '用户名已存在'}), 400
         
-        if User.query.filter_by(email=data['email']).first():
-            return jsonify({'error': '邮箱已存在'}), 400
+        # 如果提供了邮箱，验证邮箱格式和唯一性
+        email = data.get('email', '').strip()
+        if email:
+            # 验证邮箱格式
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, email):
+                return jsonify({'error': '邮箱格式不正确'}), 400
+            
+            # 检查邮箱是否已存在
+            if User.query.filter_by(email=email).first():
+                return jsonify({'error': '邮箱已存在'}), 400
         
-        # 验证邮箱格式
-        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, data['email']):
-            return jsonify({'error': '邮箱格式不正确'}), 400
-        
-        # 验证手机号格式
-        phone_pattern = r'^1[3-9]\d{9}$'
-        if not re.match(phone_pattern, data['phone']):
-            return jsonify({'error': '手机号格式不正确'}), 400
+        # 如果提供了手机号，验证手机号格式
+        phone = data.get('phone', '').strip()
+        if phone:
+            phone_pattern = r'^1[3-9]\d{9}$'
+            if not re.match(phone_pattern, phone):
+                return jsonify({'error': '手机号格式不正确'}), 400
         
         # 创建新用户
         user = User(
             username=data['username'],
-            email=data['email'],
-            real_name=data['real_name'],
-            phone=data['phone'],
+            email=email if email else None,
+            phone=phone if phone else None,
             authority=0  # 默认为普通用户
         )
         user.set_password(data['password'])
@@ -96,6 +101,7 @@ def register():
         
     except Exception as e:
         db.session.rollback()
+        print(f"注册异常: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
@@ -104,16 +110,19 @@ def login():
     try:
         data = request.json
         username = data.get('username')
-        email = data.get('email')
         password = data.get('password')
         
         if not username or not password:
             return jsonify({'error': '用户名和密码不能为空'}), 400
         
         # 支持用户名或邮箱登录
-        user = User.query.filter(
-            db.or_(User.username == username, User.email == username)
-        ).first()
+        user = None
+        if '@' in username:
+            # 如果输入包含@，尝试用邮箱登录
+            user = User.query.filter_by(email=username).first()
+        else:
+            # 否则用用户名登录
+            user = User.query.filter_by(username=username).first()
         
         if user and user.check_password(password):
             return jsonify({
@@ -128,6 +137,7 @@ def login():
             }), 401
             
     except Exception as e:
+        print(f"登录异常: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
@@ -361,6 +371,8 @@ def like_article(article_id):
         data = request.json
         user_id = data.get('user_id')
         
+        print(f"点赞请求: 文章ID={article_id}, 用户ID={user_id}")
+        
         if not user_id:
             return jsonify({'error': '用户ID不能为空'}), 400
         
@@ -368,31 +380,42 @@ def like_article(article_id):
         if not article:
             return jsonify({'error': '文章不存在'}), 404
         
+        print(f"文章信息: ID={article.id}, 标题={article.title}, 当前点赞数={article.likes_count}")
+        
         # 检查是否已经点赞
         existing_like = Like.query.filter_by(user_id=user_id, article_id=article_id).first()
         
         if existing_like:
             # 取消点赞
+            print(f"用户{user_id}已点赞文章{article_id}，执行取消点赞")
             db.session.delete(existing_like)
             article.likes_count = max(0, article.likes_count - 1)
             message = '取消点赞成功'
+            is_liked = False
         else:
             # 添加点赞
+            print(f"用户{user_id}未点赞文章{article_id}，执行添加点赞")
             like = Like(user_id=user_id, article_id=article_id)
             db.session.add(like)
             article.likes_count += 1
             message = '点赞成功'
+            is_liked = True
         
+        print(f"更新后点赞数: {article.likes_count}")
         db.session.commit()
         
-        return jsonify({
+        response_data = {
             'message': message,
             'likes_count': article.likes_count,
-            'is_liked': not bool(existing_like)
-        })
+            'is_liked': is_liked
+        }
+        print(f"返回响应: {response_data}")
+        
+        return jsonify(response_data)
         
     except Exception as e:
         db.session.rollback()
+        print(f"点赞操作异常: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/articles/<int:article_id>/like', methods=['GET'])
@@ -400,12 +423,77 @@ def check_like_status(article_id):
     """检查用户是否已点赞文章"""
     try:
         user_id = request.args.get('user_id', type=int)
+        print(f"检查点赞状态: 文章ID={article_id}, 用户ID={user_id}")
+        
         if not user_id:
             return jsonify({'error': '用户ID不能为空'}), 400
         
         like = Like.query.filter_by(user_id=user_id, article_id=article_id).first()
-        return jsonify({'is_liked': bool(like)})
+        is_liked = bool(like)
+        print(f"用户{user_id}对文章{article_id}的点赞状态: {is_liked}")
         
+        return jsonify({'is_liked': is_liked})
+        
+    except Exception as e:
+        print(f"检查点赞状态异常: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# 用户个人内容API
+@app.route('/api/users/<int:user_id>/likes', methods=['GET'])
+def get_user_likes(user_id):
+    """获取用户点赞的文章列表"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
+        print(f"获取用户{user_id}的点赞文章: 页码={page}, 每页={per_page}")
+
+        # 先查询该用户的点赞记录，按时间倒序
+        likes_query = Like.query.filter_by(user_id=user_id).order_by(Like.created_at.desc())
+        likes_page = likes_query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        print(f"找到{likes_page.total}条点赞记录")
+
+        # 收集对应文章
+        liked_articles = []
+        for like in likes_page.items:
+            article = Article.query.get(like.article_id)
+            if article and article.status == 'published':
+                liked_articles.append(article.to_dict())
+                print(f"添加点赞文章: ID={article.id}, 标题={article.title}")
+            else:
+                print(f"跳过无效文章: article_id={like.article_id}, status={article.status if article else 'None'}")
+
+        print(f"返回{len(liked_articles)}篇点赞文章")
+        
+        return jsonify({
+            'articles': liked_articles,
+            'total': likes_page.total,
+            'pages': likes_page.pages,
+            'current_page': page
+        })
+    except Exception as e:
+        print(f"获取用户点赞文章异常: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/users/<int:user_id>/articles', methods=['GET'])
+def get_user_articles(user_id):
+    """获取用户自己发布的文章列表"""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+
+        query = Article.query.filter_by(status='published', author_id=user_id)
+        articles = query.order_by(Article.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+
+        return jsonify({
+            'articles': [article.to_dict() for article in articles.items],
+            'total': articles.total,
+            'pages': articles.pages,
+            'current_page': page
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

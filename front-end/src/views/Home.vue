@@ -10,16 +10,34 @@ import {
   LikeOutlined,
   TrophyOutlined,
   FireOutlined,
-  ArrowRightOutlined
+  ArrowRightOutlined,
+  ReloadOutlined
 } from '@ant-design/icons-vue';
 import { useRouter } from 'vue-router';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
+import axios from 'axios';
+import { message } from 'ant-design-vue';
 
 const router = useRouter();
 
 // 用户状态
 const user = ref(null);
 const loading = ref(true);
+
+// 统计数据
+const stats = ref({
+  total_users: 0,
+  total_articles: 0,
+  total_views: 0,
+  total_likes: 0
+});
+
+const statsLoading = ref(false);
+const lastUpdateTime = ref(null);
+const statsUpdated = ref(false);
+
+// 自动刷新定时器
+let autoRefreshTimer = null;
 
 // 检查用户登录状态
 const checkUserStatus = () => {
@@ -38,9 +56,90 @@ const checkUserStatus = () => {
   }
 };
 
-// 页面加载时检查用户状态
+// 获取统计数据
+const fetchStats = async () => {
+  try {
+    statsLoading.value = true;
+    const response = await axios.get('/api/stats');
+    if (response.data) {
+      stats.value = response.data;
+      lastUpdateTime.value = new Date();
+      statsUpdated.value = true;
+      console.log('获取统计数据成功:', stats.value);
+      
+      // 重置更新状态
+      setTimeout(() => {
+        statsUpdated.value = false;
+      }, 600);
+    }
+  } catch (error) {
+    console.error('获取统计数据失败:', error);
+    message.error('获取统计数据失败');
+  } finally {
+    statsLoading.value = false;
+  }
+};
+
+// 刷新统计数据
+const refreshStats = () => {
+  fetchStats();
+  message.success('统计数据已刷新');
+};
+
+// 启动自动刷新
+const startAutoRefresh = () => {
+  // 每5分钟自动刷新一次统计数据
+  autoRefreshTimer = setInterval(() => {
+    console.log('自动刷新统计数据...');
+    fetchStats();
+  }, 5 * 60 * 1000); // 5分钟
+};
+
+// 停止自动刷新
+const stopAutoRefresh = () => {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = null;
+  }
+};
+
+// 格式化数字显示
+const formatNumber = (num) => {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  } else if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K';
+  }
+  return num.toString();
+};
+
+// 格式化时间显示
+const formatTime = (date) => {
+  if (!date) return '';
+  const now = new Date();
+  const diff = now - date;
+  
+  if (diff < 60000) { // 小于1分钟
+    return '刚刚';
+  } else if (diff < 3600000) { // 小于1小时
+    return `${Math.floor(diff / 60000)}分钟前`;
+  } else if (diff < 86400000) { // 小于1天
+    return `${Math.floor(diff / 3600000)}小时前`;
+  } else {
+    return date.toLocaleDateString();
+  }
+};
+
+// 页面加载时检查用户状态和获取统计数据
 onMounted(() => {
   checkUserStatus();
+  fetchStats();
+  startAutoRefresh();
+});
+
+// 页面卸载时清理定时器
+onUnmounted(() => {
+  stopAutoRefresh();
 });
 
 // 开始阅读功能
@@ -126,7 +225,10 @@ const handleViewHotArticles = () => {
               <UserOutlined />
             </div>
             <div class="stat-content">
-              <div class="stat-number">1,234</div>
+              <div class="stat-number">
+                <a-spin v-if="statsLoading" size="small" />
+                <span v-else :class="{ 'updated': statsUpdated }">{{ formatNumber(stats.total_users) }}</span>
+              </div>
               <div class="stat-label">活跃用户</div>
             </div>
           </div>
@@ -137,7 +239,10 @@ const handleViewHotArticles = () => {
               <BookOutlined />
             </div>
             <div class="stat-content">
-              <div class="stat-number">567</div>
+              <div class="stat-number">
+                <a-spin v-if="statsLoading" size="small" />
+                <span v-else :class="{ 'updated': statsUpdated }">{{ formatNumber(stats.total_articles) }}</span>
+              </div>
               <div class="stat-label">文章总数</div>
             </div>
           </div>
@@ -148,7 +253,10 @@ const handleViewHotArticles = () => {
               <EyeOutlined />
             </div>
             <div class="stat-content">
-              <div class="stat-number">89,012</div>
+              <div class="stat-number">
+                <a-spin v-if="statsLoading" size="small" />
+                <span v-else :class="{ 'updated': statsUpdated }">{{ formatNumber(stats.total_views) }}</span>
+              </div>
               <div class="stat-label">总浏览量</div>
             </div>
           </div>
@@ -159,12 +267,22 @@ const handleViewHotArticles = () => {
               <LikeOutlined />
             </div>
             <div class="stat-content">
-              <div class="stat-number">12,345</div>
+              <div class="stat-number">
+                <a-spin v-if="statsLoading" size="small" />
+                <span v-else :class="{ 'updated': statsUpdated }">{{ formatNumber(stats.total_likes) }}</span>
+              </div>
               <div class="stat-label">总点赞数</div>
             </div>
           </div>
         </a-col>
       </a-row>
+      <div class="refresh-stats-btn">
+        <a-button type="dashed" @click="refreshStats" :loading="statsLoading">
+          <template #icon><ReloadOutlined /></template>
+          刷新统计
+        </a-button>
+        <span class="last-update-time">最后更新: {{ formatTime(lastUpdateTime) }}</span>
+      </div>
     </div>
 
     <!-- 用户状态和操作 -->
@@ -434,6 +552,31 @@ const handleViewHotArticles = () => {
   font-weight: 700;
   color: #2c3e50;
   margin-bottom: 4px;
+  transition: all 0.3s ease;
+}
+
+.stat-number span {
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.stat-number span.updated {
+  animation: numberUpdate 0.6s ease-out;
+}
+
+@keyframes numberUpdate {
+  0% {
+    transform: scale(1);
+    color: #2c3e50;
+  }
+  50% {
+    transform: scale(1.1);
+    color: #667eea;
+  }
+  100% {
+    transform: scale(1);
+    color: #2c3e50;
+  }
 }
 
 .stat-label {
@@ -503,6 +646,34 @@ const handleViewHotArticles = () => {
 
 .view-all-btn:hover :deep(.anticon) {
   transform: translateX(4px);
+}
+
+.refresh-stats-btn {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.refresh-stats-btn .ant-btn {
+  border-style: dashed;
+  border-color: #d9d9d9;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.refresh-stats-btn .ant-btn:hover {
+  border-color: #667eea;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.refresh-stats-btn .ant-btn:active {
+  transform: scale(0.95);
+}
+
+.last-update-time {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  margin-left: 16px;
 }
 
 /* 响应式设计 */

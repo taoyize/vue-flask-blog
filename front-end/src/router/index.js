@@ -7,6 +7,7 @@ import SubmitPassage from "@/views/SubmitPassage.vue";
 import UserRegister from "@/views/UserRegister.vue";
 import ArticleReader from "@/views/ArticleReader.vue";
 import ArticleList from "@/views/ArticleList.vue";
+import My from "@/views/My.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,6 +16,12 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: Home,
+    },
+    {
+      path: '/me',
+      name: 'me',
+      component: My,
+      meta: { requiresAuth: true }
     },
     {
       path:'/articles',
@@ -53,6 +60,16 @@ const router = createRouter({
 // 全局前置守卫：滚动置顶 + 管理员权限校验
 router.beforeEach((to, from, next) => {
   window.scrollTo(0, 0);
+
+  // 需要登录的页面
+  if (to.meta?.requiresAuth) {
+    const raw = localStorage.getItem('user')
+    let user = null
+    try { user = raw ? JSON.parse(raw) : null } catch (_) { user = null }
+    if (!user) {
+      return next({ path: '/login', query: { redirect: to.fullPath } })
+    }
+  }
 
   if (to.meta?.requiresAdmin) {
     const raw = localStorage.getItem('user')
