@@ -132,15 +132,16 @@ onMounted(fetchArticles)
 }
 
 .list-item:hover {
-  background: rgba(102, 126, 234, 0.05);
+  background: var(--bg-secondary);
 }
 
 .meta {
   display: flex;
   gap: 12px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 12px;
   margin-bottom: 8px;
+  transition: var(--transition);
 }
 
 .views, .likes {
@@ -150,8 +151,9 @@ onMounted(fetchArticles)
 }
 
 .excerpt {
-  color: #5a6c7d;
+  color: var(--text-secondary);
   margin-bottom: 8px;
+  transition: var(--transition);
 }
 
 .tags {

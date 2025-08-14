@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../flask+vue+mysql通信/front-end"
+		},
+		{
+			"path": "../flask+vue+mysql通信/back-end"
+		}
+	],
+	"settings": {}
+}

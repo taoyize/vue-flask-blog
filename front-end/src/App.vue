@@ -1,40 +1,10 @@
 <script setup>
 import HeadMenu from "@/components/headMenu.vue";
 import GlobalErrorHandler from "@/components/GlobalErrorHandler.vue";
-import { ref, onErrorCaptured } from 'vue';
+import { ref, onErrorCaptured, computed } from 'vue';
+import { useTheme } from '@/composables/useTheme';
 
-const footerStyle = {
-  textAlign: 'center',
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  color: '#fff',
-  padding: '20px 0',
-  fontSize: '14px',
-  fontWeight: '500',
-  boxShadow: '0 -2px 10px rgba(0,0,0,0.1)',
-  borderTop: '1px solid rgba(255,255,255,0.1)'
-};
-
-const contentStyle = {
-  padding: '20px',
-  background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-  minHeight: 'calc(100vh - 120px)',
-  position: 'relative'
-};
-
-const layoutStyle = {
-  minHeight: '100vh',
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-};
-
-const headerStyle = {
-  background: 'rgba(255, 255, 255, 0.95)',
-  backdropFilter: 'blur(10px)',
-  borderBottom: '1px solid rgba(255,255,255,0.2)',
-  boxShadow: '0 2px 20px rgba(0,0,0,0.1)',
-  position: 'sticky',
-  top: 0,
-  zIndex: 1000
-};
+const { isDark } = useTheme();
 
 // 错误处理
 onErrorCaptured((error, instance, info) => {
@@ -44,14 +14,14 @@ onErrorCaptured((error, instance, info) => {
 </script>
 
 <template>
-  <div id="app">
+  <div id="app" :class="{ 'theme-dark': isDark, 'theme-light': !isDark }">
     <global-error-handler />
-    <a-layout :style="layoutStyle">
-      <a-layout-header :style="headerStyle">
+    <a-layout class="main-layout">
+      <a-layout-header class="main-header">
         <head-menu />
       </a-layout-header>
       
-      <a-layout-content :style="contentStyle">
+      <a-layout-content class="main-content">
         <div class="content-wrapper">
           <router-view v-slot="{ Component, route }">
             <transition name="fade" mode="out-in">
@@ -61,7 +31,7 @@ onErrorCaptured((error, instance, info) => {
         </div>
       </a-layout-content>
       
-      <a-layout-footer :style="footerStyle">
+      <a-layout-footer class="main-footer">
         <div class="footer-content">
           <span>© 2025 idealist_taoyize</span>
           <span class="footer-divider">|</span>
@@ -76,14 +46,15 @@ onErrorCaptured((error, instance, info) => {
 .content-wrapper {
   max-width: 1200px;
   margin: 0 auto;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--card-bg);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-heavy);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-color);
   position: relative;
   min-height: 300px;
+  transition: var(--transition);
 }
 
 .content-wrapper::before {

@@ -243,11 +243,12 @@ onMounted(() => {
 }
 
 .article-container {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--card-bg);
   border-radius: 16px;
   padding: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-heavy);
   margin-bottom: 24px;
+  transition: var(--transition);
 }
 
 .article-header {
@@ -257,9 +258,10 @@ onMounted(() => {
 .article-title {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 24px;
   line-height: 1.3;
+  transition: var(--transition);
 }
 
 .article-meta {
@@ -290,16 +292,18 @@ onMounted(() => {
 .author-name {
   font-size: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 4px;
+  transition: var(--transition);
 }
 
 .publish-time {
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 4px;
+  transition: var(--transition);
 }
 
 .article-stats {
@@ -311,8 +315,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 14px;
+  transition: var(--transition);
 }
 
 .article-tags {
@@ -336,17 +341,19 @@ onMounted(() => {
 .article-content {
   font-size: 16px;
   line-height: 1.8;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 32px;
+  transition: var(--transition);
 }
 
 .article-content h2 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin: 32px 0 16px 0;
   padding-bottom: 8px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--border-color);
+  transition: var(--transition);
 }
 
 .article-content p {
@@ -354,20 +361,23 @@ onMounted(() => {
 }
 
 .article-content pre {
-  background: #f8f9fa;
+  background: var(--code-bg);
   padding: 16px;
   border-radius: 8px;
   overflow-x: auto;
   margin: 16px 0;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--code-border);
+  transition: var(--transition);
 }
 
 .article-content code {
-  background: #f1f3f4;
+  background: var(--code-bg);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 14px;
+  color: var(--text-primary);
+  transition: var(--transition);
 }
 
 .article-actions {
@@ -386,10 +396,11 @@ onMounted(() => {
 }
 
 .related-articles {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--card-bg);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-medium);
+  transition: var(--transition);
 }
 
 .related-title {
@@ -398,10 +409,11 @@ onMounted(() => {
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid var(--border-color);
+  transition: var(--transition);
 }
 
 .related-list {
@@ -416,7 +428,7 @@ onMounted(() => {
   align-items: center;
   padding: 12px 16px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--bg-secondary);
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -429,8 +441,9 @@ onMounted(() => {
 .related-title-text {
   font-size: 14px;
   font-weight: 500;
-  color: #2c3e50;
+  color: var(--text-primary);
   flex: 1;
+  transition: var(--transition);
 }
 
 .related-views {
@@ -438,7 +451,8 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #7f8c8d;
+  color: var(--text-secondary);
+  transition: var(--transition);
 }
 
 /* 响应式设计 */

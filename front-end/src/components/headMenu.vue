@@ -16,6 +16,7 @@
     />
     
     <div class="header-actions">
+      <theme-toggle class="theme-toggle-btn" />
       <a-button type="primary" shape="round" size="small" class="action-btn" @click="refreshPage">
         <template #icon><SettingOutlined /></template>
         刷新
@@ -36,6 +37,7 @@ import {
 } from '@ant-design/icons-vue';
 import { MenuProps } from 'ant-design-vue';
 import { useRouter, useRoute } from "vue-router";
+import ThemeToggle from './ThemeToggle.vue';
 
 const current = ref<string[]>(['/']);
 const route = useRoute();
@@ -150,8 +152,9 @@ const refreshPage = () => {
 .logo-text {
   font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   letter-spacing: 0.5px;
+  transition: var(--transition);
 }
 
 .custom-menu {
@@ -206,6 +209,10 @@ const refreshPage = () => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.theme-toggle-btn {
+  margin-right: 8px;
 }
 
 .action-btn {
