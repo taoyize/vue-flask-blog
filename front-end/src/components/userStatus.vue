@@ -1,12 +1,12 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import { UserOutlined, CrownOutlined, TeamOutlined, LoginOutlined } from '@ant-design/icons-vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const user = ref(null);
 
-onMounted(() => {
+const refreshFromStorage = () => {
   const storedUser = localStorage.getItem("user");
   if (storedUser && storedUser !== "undefined" && storedUser !== "null") {
     try {
@@ -18,6 +18,16 @@ onMounted(() => {
   } else {
     user.value = null;
   }
+};
+
+onMounted(() => {
+  refreshFromStorage();
+  const handler = (e) => {
+    refreshFromStorage();
+  };
+  window.addEventListener('user-updated', handler);
+  // 卸载时移除监听
+  onBeforeUnmount(() => window.removeEventListener('user-updated', handler));
 });
 
 const getUserRole = () => {
@@ -43,15 +53,16 @@ const handleLogin = () => {
 <template>
   <div class="user-status-container">
     <div v-if="user" class="user-card">
-      <div class="user-avatar">
-        <a-avatar :size="48" class="avatar">
+      <div class="user-avatar" @click="router.push(`/user/${user.id}`)" style="cursor: pointer;">
+        <a-avatar v-if="user?.avatar" :size="48" class="avatar" :src="user.avatar" />
+        <a-avatar v-else :size="48" class="avatar">
           <template #icon><UserOutlined /></template>
         </a-avatar>
         <div class="status-indicator online"></div>
       </div>
       
       <div class="user-info">
-        <div class="user-name">{{ user.name }}</div>
+        <div class="user-name">{{ user.username }}</div>
         <div class="user-role">
           <component :is="getRoleIcon()" class="role-icon" :style="{ color: getRoleColor() }" />
           <span :style="{ color: getRoleColor() }">{{ getUserRole() }}</span>

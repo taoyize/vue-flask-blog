@@ -21,6 +21,7 @@ const article = ref({
   id: 0,
   title: '',
   author: '',
+  authorId: null,
   authorAvatar: '',
   publishTime: '',
   readTime: '5分钟',
@@ -50,6 +51,7 @@ const fetchArticle = async () => {
       id: articleData.id,
       title: articleData.title,
       author: articleData.author || '未知作者',
+      authorId: articleData.author_id || null,
       authorAvatar: '',
       publishTime: articleData.created_at ? new Date(articleData.created_at).toLocaleDateString('zh-CN') : '',
       readTime: '5分钟',
@@ -164,8 +166,10 @@ const handleRelatedArticleClick = (relatedArticle) => {
 }
 
 const handleAuthorClick = () => {
-  console.log('查看作者:', article.value.author)
-  // router.push(`/author/${article.value.author}`)
+  if (article.value.authorId) {
+    return router.push(`/user/${article.value.authorId}`)
+  }
+  message.warning('未找到作者信息')
 }
 
 // 监听路由参数变化

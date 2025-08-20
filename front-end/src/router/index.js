@@ -8,6 +8,7 @@ import UserRegister from "@/views/UserRegister.vue";
 import ArticleReader from "@/views/ArticleReader.vue";
 import ArticleList from "@/views/ArticleList.vue";
 import My from "@/views/My.vue";
+import UserProfile from "@/views/UserProfile.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -16,6 +17,11 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: Home,
+    },
+    {
+      path: '/user/:id',
+      name: 'userProfile',
+      component: UserProfile
     },
     {
       path: '/me',
@@ -66,7 +72,9 @@ router.beforeEach((to, from, next) => {
     const raw = localStorage.getItem('user')
     let user = null
     try { user = raw ? JSON.parse(raw) : null } catch (_) { user = null }
-    if (!user) {
+    if (!user || !user.id) {
+      // 清理无效的旧数据，避免产生 /users// 请求
+      localStorage.removeItem('user')
       return next({ path: '/login', query: { redirect: to.fullPath } })
     }
   }
@@ -76,7 +84,8 @@ router.beforeEach((to, from, next) => {
     let user = null
     try { user = raw ? JSON.parse(raw) : null } catch (_) { user = null }
 
-    if (!user) {
+    if (!user || !user.id) {
+      localStorage.removeItem('user')
       return next({ path: '/login', query: { redirect: to.fullPath } })
     }
     if (Number(user.authority) !== 1) {

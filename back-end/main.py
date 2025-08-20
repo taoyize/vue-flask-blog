@@ -13,6 +13,20 @@ app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
 db.init_app(app)
 
+# 确保启动时已创建所有表，避免因未初始化导致的 500
+with app.app_context():
+    try:
+        db.create_all()
+        print("[startup] 数据表检查/创建完成")
+    except Exception as e:
+        # 可能是 MySQL 未启动/库不存在等原因，降级为本地 SQLite，保证开发环境可运行
+        print(f"[startup] 初始化数据库失败，尝试切换到SQLite: {e}")
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+        # 重新关联配置
+        db.init_app(app)
+        db.create_all()
+        print("[startup] 已切换到 SQLite 并创建数据表 app.db")
+
 # 错误处理
 @app.errorhandler(400)
 def bad_request(error):
@@ -148,19 +162,72 @@ def update_user(user_id):
         if not user:
             return jsonify({'error': '用户不存在'}), 404
         
-        data = request.json
+        data = request.json or {}
+
+        # 昵称/用户名更新与唯一性校验
+        if 'username' in data:
+            new_username = (data.get('username') or '').strip()
+            if not new_username:
+                return jsonify({'error': '用户名不能为空'}), 400
+            if new_username != user.username:
+                exists = User.query.filter_by(username=new_username).first()
+                if exists:
+                    return jsonify({'error': '用户名已存在'}), 400
+                user.username = new_username
+
+        # 邮箱更新与格式、唯一性校验（允许置空）
+        if 'email' in data:
+            raw_email = data.get('email')
+            email = (raw_email or '').strip() if isinstance(raw_email, str) else None
+            if email:
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                if not re.match(email_pattern, email):
+                    return jsonify({'error': '邮箱格式不正确'}), 400
+                if email != (user.email or ''):
+                    if User.query.filter_by(email=email).first():
+                        return jsonify({'error': '邮箱已存在'}), 400
+                user.email = email
+            else:
+                user.email = None
+
+        # 手机号更新与格式校验（允许置空）
+        if 'phone' in data:
+            raw_phone = data.get('phone')
+            phone = (raw_phone or '').strip() if isinstance(raw_phone, str) else None
+            if phone:
+                phone_pattern = r'^1[3-9]\d{9}$'
+                if not re.match(phone_pattern, phone):
+                    return jsonify({'error': '手机号格式不正确'}), 400
+                user.phone = phone
+            else:
+                user.phone = ''
+
+        # 头像与真实姓名（可选）
+        if 'avatar' in data:
+            raw_avatar = data.get('avatar')
+            if raw_avatar is None or (isinstance(raw_avatar, str) and raw_avatar.strip() == ''):
+                user.avatar = ''
+            else:
+                if not isinstance(raw_avatar, str):
+                    return jsonify({'error': '头像应为字符串URL'}), 400
+                avatar = raw_avatar.strip()
+                # 简单URL校验与长度限制（与数据库字段长度保持一致）
+                if len(avatar) > 255:
+                    return jsonify({'error': '头像URL过长，最多255个字符'}), 400
+                if not re.match(r'^(https?://|data:image/)', avatar):
+                    return jsonify({'error': '头像URL格式不正确，应以 http/https 或 data:image/ 开头'}), 400
+                user.avatar = avatar
         if 'real_name' in data:
             user.real_name = data['real_name']
-        if 'phone' in data:
-            user.phone = data['phone']
-        if 'avatar' in data:
-            user.avatar = data['avatar']
-        
+
         db.session.commit()
         return jsonify({'message': '更新成功', 'user': user.to_dict()})
         
     except Exception as e:
         db.session.rollback()
+        import traceback
+        print('[update_user] 发生异常:', e)
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])

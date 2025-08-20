@@ -34,6 +34,7 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'email': self.email,
+            'phone': self.phone,
             'real_name': self.real_name,
             'authority': self.authority,
             'avatar': self.avatar,
